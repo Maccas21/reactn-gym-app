@@ -1,5 +1,5 @@
-import { useAuth } from "@/app/providers/AuthProvider";
 import { Redirect, Tabs } from "expo-router";
+import { useAuth } from "../(providers)/AuthProvider";
 
 export default function TabsLayout() {
 	const { session, loading } = useAuth();

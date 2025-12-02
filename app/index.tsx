@@ -1,5 +1,5 @@
-import { useAuth } from "@/app/providers/AuthProvider";
 import { Redirect } from "expo-router";
+import { useAuth } from "./(providers)/AuthProvider";
 
 export default function Index() {
 	const { session, loading } = useAuth();

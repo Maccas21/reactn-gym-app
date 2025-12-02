@@ -8,22 +8,22 @@ import {
 	useState,
 } from "react";
 
-// 1️⃣ Define context type
+// 1️ Define context type
 type AuthContextType = {
 	session: Session | null;
 	loading: boolean;
 };
 
-// 2️⃣ Create context
+// 2️ Create context
 const AuthContext = createContext<AuthContextType>({
 	session: null,
 	loading: true,
 });
 
-// 3️⃣ Hook to use context in any screen
+// 3️ Hook to use context in any screen
 export const useAuth = () => useContext(AuthContext);
 
-// 4️⃣ Provider component
+// 4️ Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
 	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -51,3 +51,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		</AuthContext.Provider>
 	);
 }
+
+export default AuthProvider;
