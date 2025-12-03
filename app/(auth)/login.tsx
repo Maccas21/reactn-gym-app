@@ -1,5 +1,5 @@
 import { supabase } from "@/services/supabase";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import {
 	ActivityIndicator,
@@ -11,6 +11,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
+import { useAuth } from "../(providers)/AuthProvider";
 
 export default function Login() {
 	const router = useRouter();
@@ -18,6 +19,21 @@ export default function Login() {
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [mode, setMode] = useState<"login" | "signup">("login");
+	const { session, loading: authLoading } = useAuth();
+
+	// Still restoring session? loader
+	if (authLoading) {
+		return (
+			<View style={styles.loadingOverlay}>
+				<ActivityIndicator size={60} color="#007AFF" />
+			</View>
+		);
+	}
+
+	// Already logged in? redirect to home page
+	if (session) {
+		return <Redirect href="/home" />;
+	}
 
 	const handleLogin = async () => {
 		if (!email || !password) {
@@ -85,8 +101,9 @@ export default function Login() {
 		}
 	};
 
-	const handleResetPassword = () => {
+	const handleResetPassword = async () => {
 		console.log("Reset password button");
+		router.push("/resetpassword");
 	};
 
 	const resetFields = () => {
@@ -174,19 +191,9 @@ export default function Login() {
 				disabled={loading}
 			/>
 
-			<View style={{ marginTop: 10 }}>
-				<TouchableOpacity onPress={handleResetPassword} disabled>
-					<Text
-						style={[
-							styles.link,
-							{
-								textDecorationLine: "line-through",
-								color: "#585858ff",
-							},
-						]}
-					>
-						Forgot Password?
-					</Text>
+			<View style={{ marginTop: 10, alignItems: "center" }}>
+				<TouchableOpacity onPress={handleResetPassword}>
+					<Text style={styles.link}>Forgot Password?</Text>
 				</TouchableOpacity>
 
 				<TouchableOpacity onPress={handleAnonymousLogin}>
