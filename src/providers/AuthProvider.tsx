@@ -1,4 +1,4 @@
-import { supabase } from "@/services/supabase";
+import { supabase } from "@/src/services/supabase";
 import { Session } from "@supabase/supabase-js";
 import {
 	createContext,

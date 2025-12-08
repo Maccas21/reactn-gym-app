@@ -1,6 +1,7 @@
+import { useAuth } from "@/src/providers/AuthProvider";
 import { Redirect } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
-import { useAuth } from "./(providers)/AuthProvider";
+import { View } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 
 export default function Index() {
 	const { session, loading } = useAuth();
@@ -14,7 +15,7 @@ export default function Index() {
 					alignItems: "center",
 				}}
 			>
-				<ActivityIndicator size={60} />
+				<ActivityIndicator size="large" />
 			</View>
 		);
 	}

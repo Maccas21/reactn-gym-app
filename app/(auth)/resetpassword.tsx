@@ -1,46 +1,57 @@
-import { supabase } from "@/services/supabase";
+import { useMessage } from "@/src/providers/MessageProvider";
+import { supabase } from "@/src/services/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-	ActivityIndicator,
-	Alert,
-	Button,
-	StyleSheet,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ActivityIndicator, Button, Text, TextInput } from "react-native-paper";
 
 export default function ResetPassword() {
 	const [email, setEmail] = useState("");
 	const [code, setCode] = useState("");
 	const [newPassword, setNewPassword] = useState("");
 	const [loading, setLoading] = useState(false);
+	const { showMessage } = useMessage();
 
 	const handleSendCode = async () => {
 		if (!email) {
-			Alert.alert("Error", "Please enter your email");
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: "Please enter your email",
+			});
 			return;
 		}
 
 		setLoading(true);
-		const { data, error } = await supabase.auth.signInWithOtp({
+		const { error } = await supabase.auth.signInWithOtp({
 			email,
 			options: { shouldCreateUser: false },
 		});
 		setLoading(false);
 
 		if (error) {
-			Alert.alert("Error", error.message);
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: error.message,
+			});
 			return;
 		}
-		Alert.alert("Success", "Please check your email for a reset code");
-		console.log("Code sent");
+
+		showMessage({
+			type: "dialog",
+			title: "Sucess",
+			message: "Please check your email for a reset code",
+		});
 	};
 
 	const handleResetPassword = async () => {
 		if (!email || !code || !newPassword) {
-			Alert.alert("Error", "Please enter email, code, and new password");
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: "Please enter your email, code and new password",
+			});
 			return;
 		}
 
@@ -55,85 +66,97 @@ export default function ResetPassword() {
 
 		if (verifyResponse.error) {
 			setLoading(false);
-			Alert.alert("Error", verifyResponse.error.message);
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: verifyResponse.error.message,
+			});
 			return;
 		}
-
-		console.log("Temp login in via OTP");
 
 		// 2. Reset password
 		const updateResponse = await supabase.auth.updateUser({
 			password: newPassword,
 		});
+
 		if (updateResponse.error) {
 			setLoading(false);
-			Alert.alert("Error", updateResponse.error.message);
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: updateResponse.error.message,
+			});
 			return;
 		}
-		console.log("Password reset successful");
 
 		// 3. Logout
 		const logoutResponse = await supabase.auth.signOut();
 		setLoading(false);
 
 		if (logoutResponse.error) {
-			Alert.alert("Error", logoutResponse.error.message);
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: logoutResponse.error.message,
+			});
 			return;
 		}
 
-		console.log("Logout");
-
-		Alert.alert(
-			"Success",
-			"Password reset successfully. You can now login.",
-			[
+		showMessage({
+			type: "dialog",
+			title: "Sucess",
+			message: "Password reset successfully. You can now login.",
+			actions: [
 				{
-					text: "OK",
+					label: "OK",
 					onPress: () => router.replace("/login"),
 				},
-			]
-		);
+			],
+		});
 	};
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>Reset Password</Text>
+			<Text variant="headlineMedium" style={styles.title}>
+				Reset Password
+			</Text>
 
 			<TextInput
-				placeholder="Email"
+				label="Email"
+				mode="outlined"
 				value={email}
 				onChangeText={setEmail}
 				autoCapitalize="none"
 				keyboardType="email-address"
-				style={styles.input}
 			/>
 
 			<TextInput
-				placeholder="Reset Code"
+				label="Reset Code"
+				mode="outlined"
 				value={code}
 				onChangeText={setCode}
 				keyboardType="numeric"
-				style={styles.input}
 			/>
+
 			<TextInput
-				placeholder="New Password"
+				label="New Password"
+				mode="outlined"
 				value={newPassword}
 				onChangeText={setNewPassword}
 				secureTextEntry
-				style={styles.input}
 			/>
 
-			<View style={{ marginBottom: 15 }}>
-				<Button title="Send / Resend Code" onPress={handleSendCode} />
-			</View>
+			<Button mode="contained" onPress={handleSendCode}>
+				Send / Resend Code
+			</Button>
 
-			<View style={{ marginBottom: 15 }}>
-				<Button title="Reset Password" onPress={handleResetPassword} />
-			</View>
+			<Button mode="contained" onPress={handleResetPassword}>
+				Reset Password
+			</Button>
 
 			{loading && (
 				<View style={styles.loadingOverlay}>
-					<ActivityIndicator size={60} color="#007AFF" />
+					<ActivityIndicator size="large" />
 				</View>
 			)}
 		</View>
@@ -143,22 +166,12 @@ export default function ResetPassword() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		justifyContent: "center",
 		padding: 20,
-		backgroundColor: "#fff",
+		gap: 10,
+		justifyContent: "center",
 	},
 	title: {
-		fontSize: 32,
-		fontWeight: "bold",
-		marginBottom: 20,
 		textAlign: "center",
-	},
-	input: {
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 8,
-		padding: 12,
-		marginBottom: 15,
 	},
 	loadingOverlay: {
 		position: "absolute",

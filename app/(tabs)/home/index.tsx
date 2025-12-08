@@ -1,5 +1,4 @@
-import { supabase } from "@/services/supabase";
-import { Button, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 export default function Home() {
 	return (
@@ -11,12 +10,6 @@ export default function Home() {
 			}}
 		>
 			<Text>Edit (tabs)/home/index.tsx to edit this screen.</Text>
-			<View>
-				<Button
-					title="Sign Out"
-					onPress={() => supabase.auth.signOut()}
-				/>
-			</View>
 		</View>
 	);
 }

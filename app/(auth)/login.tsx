@@ -1,48 +1,52 @@
-import { supabase } from "@/services/supabase";
+import { useAuth } from "@/src/providers/AuthProvider";
+import { useMessage } from "@/src/providers/MessageProvider";
+import { supabase } from "@/src/services/supabase";
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
+import { StyleSheet, View } from "react-native";
 import {
 	ActivityIndicator,
-	Alert,
 	Button,
-	StyleSheet,
+	SegmentedButtons,
 	Text,
 	TextInput,
-	TouchableOpacity,
-	View,
-} from "react-native";
-import { useAuth } from "../(providers)/AuthProvider";
+} from "react-native-paper";
 
 export default function Login() {
+	const { session, loading: authLoading } = useAuth();
 	const router = useRouter();
+	const { showMessage } = useMessage();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [mode, setMode] = useState<"login" | "signup">("login");
-	const { session, loading: authLoading } = useAuth();
 
-	// Still restoring session? loader
+	// Still restoring session? show loader
 	if (authLoading) {
 		return (
 			<View style={styles.loadingOverlay}>
-				<ActivityIndicator size={60} color="#007AFF" />
+				<ActivityIndicator size="large" />
 			</View>
 		);
 	}
 
-	// Already logged in? redirect to home page
+	// Already logged in? redirect
 	if (session) {
 		return <Redirect href="/home" />;
 	}
 
 	const handleLogin = async () => {
 		if (!email || !password) {
-			Alert.alert("Error", "Please enter both email and password.");
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: "Please enter both email and password.",
+			});
 			return;
 		}
 
 		setLoading(true);
-		const { data, error } = await supabase.auth.signInWithPassword({
+		const { error } = await supabase.auth.signInWithPassword({
 			email,
 			password,
 		});
@@ -50,35 +54,48 @@ export default function Login() {
 
 		if (error) {
 			console.log("Login Error:", error);
-			Alert.alert("Login Failed", error.message);
-		} else {
-			// Redirect immediately after successful login
-			router.replace("/(tabs)/home");
+			showMessage({
+				type: "dialog",
+				title: "Login Failed",
+				message: error.message,
+			});
+			return;
 		}
+
+		router.replace("/(tabs)/home");
 	};
 
 	const handleSignUp = async () => {
 		if (!email || !password) {
-			Alert.alert("Error", "Please enter email and password.");
+			showMessage({
+				type: "dialog",
+				title: "Error",
+				message: "Please enter both email and password",
+			});
 			return;
 		}
 
 		setLoading(true);
-		const { data, error } = await supabase.auth.signUp({
-			email,
-			password,
-		});
+		const { error } = await supabase.auth.signUp({ email, password });
 		setLoading(false);
 
 		if (error) {
 			console.log("Signup Error:", error);
-			Alert.alert("Sign Up Failed", error.message);
+			showMessage({
+				type: "dialog",
+				title: "Sign Up Failed",
+				message: error.message,
+			});
 			return;
 		}
 
-		Alert.alert("Success", "Account created");
-		resetFields();
-		setMode("login"); // switch to login
+		showMessage({
+			type: "snackbar",
+			message: "Sucess: Account Created",
+		});
+		setEmail("");
+		setPassword("");
+		setMode("login");
 	};
 
 	const handleAnonymousLogin = async () => {
@@ -89,120 +106,104 @@ export default function Login() {
 
 			if (error) {
 				console.log("Anon Login Error:", error);
-				Alert.alert("Error", error.message);
+				showMessage({
+					type: "dialog",
+					title: "Anon Login Error",
+					message: error.message,
+				});
 				return;
 			}
 
 			router.replace("/(tabs)/home");
 		} catch (err) {
 			console.log("Unexpected error:", err);
-			Alert.alert("Error", "Something went wrong");
+			showMessage({
+				type: "dialog",
+				title: "Unexpected Error",
+				message: "Something went wrong",
+			});
 			setLoading(false);
 		}
 	};
 
 	const handleResetPassword = async () => {
-		console.log("Reset password button");
 		router.push("/resetpassword");
-	};
-
-	const resetFields = () => {
-		setEmail("");
-		setPassword("");
 	};
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>
+			<Text variant="headlineMedium" style={styles.title}>
 				{mode === "login" ? "Login" : "Create Account"}
 			</Text>
 
-			{/* Toggle Tabs */}
-			<View style={styles.toggleContainer}>
-				<TouchableOpacity
-					style={[
-						styles.toggleButton,
-						mode === "login" && styles.activeToggle,
-					]}
-					onPress={() => {
-						setMode("login");
-						resetFields();
-					}}
-				>
-					<Text
-						style={[
-							styles.toggleText,
-							mode === "login" && styles.activeToggleText,
-						]}
-					>
-						Login
-					</Text>
-				</TouchableOpacity>
+			{/* Paper Segmented Toggle */}
+			<SegmentedButtons
+				value={mode}
+				onValueChange={(value) => setMode(value as "login" | "signup")}
+				buttons={[
+					{
+						value: "login",
+						label: "Login",
+					},
+					{
+						value: "signup",
+						label: "Sign Up",
+					},
+				]}
+			/>
 
-				<TouchableOpacity
-					style={[
-						styles.toggleButton,
-						mode === "signup" && styles.activeToggle,
-					]}
-					onPress={() => {
-						setMode("signup");
-						resetFields();
-					}}
-				>
-					<Text
-						style={[
-							styles.toggleText,
-							mode === "signup" && styles.activeToggleText,
-						]}
-					>
-						Sign Up
-					</Text>
-				</TouchableOpacity>
-			</View>
-
+			{/* Email */}
 			<TextInput
-				placeholder="Email"
+				label="Email"
 				value={email}
 				onChangeText={setEmail}
+				mode="outlined"
 				autoCapitalize="none"
 				keyboardType="email-address"
-				style={styles.input}
 			/>
+
+			{/* Password */}
 			<TextInput
-				placeholder="Password"
+				label="Password"
 				value={password}
 				onChangeText={setPassword}
+				mode="outlined"
 				secureTextEntry
-				style={styles.input}
 			/>
 
+			{/* Main button */}
 			<Button
-				color="#007AFF"
-				title={
-					loading
-						? mode === "login"
-							? "Logging in..."
-							: "Creating account..."
-						: mode === "login"
-						? "Login"
-						: "Sign Up"
-				}
+				mode="contained"
 				onPress={mode === "login" ? handleLogin : handleSignUp}
+				loading={loading}
 				disabled={loading}
-			/>
+			>
+				{mode === "login" ? "Login" : "Sign Up"}
+			</Button>
 
-			<View style={{ marginTop: 10, alignItems: "center" }}>
-				<TouchableOpacity onPress={handleResetPassword}>
-					<Text style={styles.link}>Forgot Password?</Text>
-				</TouchableOpacity>
+			{/* Links */}
+			<View>
+				<Button
+					mode="text"
+					onPress={handleResetPassword}
+					style={styles.linkButton}
+				>
+					Forgot Password?
+				</Button>
 
-				<TouchableOpacity onPress={handleAnonymousLogin}>
-					<Text style={styles.link}>Use Without Account</Text>
-				</TouchableOpacity>
+				<Button
+					mode="text"
+					onPress={handleAnonymousLogin}
+					style={styles.linkButton}
+				>
+					Use Without Account
+				</Button>
 			</View>
+
+			{/* Loading overlay */}
 			{loading && (
 				<View style={styles.loadingOverlay}>
-					<ActivityIndicator size={60} color="#007AFF" />
+					<ActivityIndicator size="large" />
 				</View>
 			)}
 		</View>
@@ -212,66 +213,24 @@ export default function Login() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		justifyContent: "center",
 		padding: 20,
-		backgroundColor: "#fff",
+		gap: 10,
+		justifyContent: "center",
 	},
-
-	// Toggle container
-	toggleContainer: {
-		flexDirection: "row",
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 5,
-		overflow: "hidden",
-		marginBottom: 20,
+	title: {
+		textAlign: "center",
 	},
-	toggleButton: {
-		flex: 1,
-		paddingVertical: 12,
-		alignItems: "center",
-		backgroundColor: "#f0f0f0",
-	},
-	activeToggle: {
-		backgroundColor: "#007AFF",
-	},
-	toggleText: {
-		fontSize: 16,
-		color: "#333",
-	},
-	activeToggleText: {
-		color: "#fff",
-		fontWeight: "bold",
-	},
-
 	loadingOverlay: {
 		position: "absolute",
 		top: 0,
 		left: 0,
 		right: 0,
 		bottom: 0,
-		backgroundColor: "rgba(0,0,0,0.2)", // optional semi-transparent overlay
 		justifyContent: "center",
 		alignItems: "center",
+		backgroundColor: "rgba(0,0,0,0.15)",
 	},
-
-	title: {
-		fontSize: 32,
-		fontWeight: "bold",
-		marginBottom: 20,
-		textAlign: "center",
-	},
-	input: {
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 8,
-		padding: 12,
-		marginBottom: 15,
-	},
-	link: {
-		color: "#007AFF",
-		textAlign: "center",
-		marginTop: 10,
-		fontSize: 14,
+	linkButton: {
+		alignSelf: "center", // removes whitespace on the sides
 	},
 });
