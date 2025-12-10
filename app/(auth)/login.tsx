@@ -10,11 +10,13 @@ import {
 	SegmentedButtons,
 	Text,
 	TextInput,
+	useTheme,
 } from "react-native-paper";
 
 export default function Login() {
 	const { session, loading: authLoading } = useAuth();
 	const router = useRouter();
+	const theme = useTheme();
 	const { showMessage } = useMessage();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -62,6 +64,7 @@ export default function Login() {
 			return;
 		}
 
+		resetFields();
 		router.replace("/(tabs)/home");
 	};
 
@@ -93,9 +96,7 @@ export default function Login() {
 			type: "snackbar",
 			message: "Sucess: Account Created",
 		});
-		setEmail("");
-		setPassword("");
-		setMode("login");
+		resetFields();
 	};
 
 	const handleAnonymousLogin = async () => {
@@ -114,6 +115,7 @@ export default function Login() {
 				return;
 			}
 
+			resetFields();
 			router.replace("/(tabs)/home");
 		} catch (err) {
 			console.log("Unexpected error:", err);
@@ -122,16 +124,29 @@ export default function Login() {
 				title: "Unexpected Error",
 				message: "Something went wrong",
 			});
+			resetFields();
 			setLoading(false);
 		}
 	};
 
 	const handleResetPassword = async () => {
+		resetFields();
 		router.push("/resetpassword");
 	};
 
+	const resetFields = () => {
+		setEmail("");
+		setPassword("");
+		setMode("login");
+	};
+
 	return (
-		<View style={styles.container}>
+		<View
+			style={[
+				styles.container,
+				{ backgroundColor: theme.colors.background },
+			]}
+		>
 			<Text variant="headlineMedium" style={styles.title}>
 				{mode === "login" ? "Login" : "Create Account"}
 			</Text>

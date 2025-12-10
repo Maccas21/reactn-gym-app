@@ -3,9 +3,16 @@ import { supabase } from "@/src/services/supabase";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { ActivityIndicator, Button, Text, TextInput } from "react-native-paper";
+import {
+	ActivityIndicator,
+	Button,
+	Text,
+	TextInput,
+	useTheme,
+} from "react-native-paper";
 
 export default function ResetPassword() {
+	const theme = useTheme();
 	const [email, setEmail] = useState("");
 	const [code, setCode] = useState("");
 	const [newPassword, setNewPassword] = useState("");
@@ -109,14 +116,19 @@ export default function ResetPassword() {
 			actions: [
 				{
 					label: "OK",
-					onPress: () => router.replace("/login"),
+					onPress: () => router.dismissAll(),
 				},
 			],
 		});
 	};
 
 	return (
-		<View style={styles.container}>
+		<View
+			style={[
+				styles.container,
+				{ backgroundColor: theme.colors.background },
+			]}
+		>
 			<Text variant="headlineMedium" style={styles.title}>
 				Reset Password
 			</Text>
