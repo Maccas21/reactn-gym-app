@@ -15,7 +15,7 @@ export default function StackLayout() {
 		>
 			<Stack.Screen
 				name="index"
-				options={{ headerTitle: "Setting Screen" }}
+				options={{ headerTitle: "Graph Screen" }}
 			/>
 		</Stack>
 	);

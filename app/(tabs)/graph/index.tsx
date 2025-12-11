@@ -1,9 +1,8 @@
 import { View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 
-export default function Home() {
+export default function Graph() {
 	const theme = useTheme();
-
 	return (
 		<View
 			style={{
@@ -13,7 +12,7 @@ export default function Home() {
 				backgroundColor: theme.colors.background,
 			}}
 		>
-			<Text>Edit (tabs)/home/index.tsx to edit this screen.</Text>
+			<Text>Edit (tabs)/graph/index.tsx to edit this screen.</Text>
 		</View>
 	);
 }
