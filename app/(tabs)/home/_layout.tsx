@@ -17,6 +17,10 @@ export default function StackLayout() {
 				name="index"
 				options={{ headerTitle: "Home Screen" }}
 			/>
+			<Stack.Screen
+				name="addexercise"
+				options={{ headerTitle: "Exercises" }}
+			/>
 		</Stack>
 	);
 }

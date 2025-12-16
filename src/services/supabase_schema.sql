@@ -82,7 +82,6 @@ CREATE TABLE BodyPart (
     Name VARCHAR UNIQUE NOT NULL
 );
 
--- Optional: seed data
 INSERT INTO BodyPart (Name) VALUES
 ('back'),
 ('cardio'),
@@ -96,16 +95,57 @@ INSERT INTO BodyPart (Name) VALUES
 ('waist');
 
 -- =========================================
+-- BODYPART TABLE
+-- =========================================
+
+CREATE TABLE Equipment (
+    Equipment_ID SERIAL PRIMARY KEY,
+    Name VARCHAR UNIQUE NOT NULL
+);
+
+INSERT INTO Equipment (Name) VALUES
+('assisted'),
+('band'),
+('barbell'),
+('body weight'),
+('bosu ball'),
+('cable'),
+('dumbbell'),
+('elliptical machine'),
+('ez barbell'),
+('hammer'),
+('kettlebell'),
+('leverage machine'),
+('medicine ball'),
+('olympic barbell'),
+('resistance band'),
+('roller'),
+('rope'),
+('skierg machine'),
+('sled machine'),
+('smith machine'),
+('stability ball'),
+('stationary bike'),
+('stepmill machine'),
+('tire'),
+('trap bar'),
+('upper body ergometer'),
+('weighted'),
+('wheel roller');
+
+-- =========================================
 -- EXERCISE TABLE
 -- =========================================
 
 CREATE TABLE Exercise (
     Exercise_ID SERIAL PRIMARY KEY,
     Name VARCHAR NOT NULL,
-    Description VARCHAR,
+    Description TEXT[],
     Body_Part_ID INT REFERENCES BodyPart(Body_Part_ID) ON DELETE CASCADE,
+    Equipment_ID INT REFERENCES Equipment(Equipment_ID) ON DELETE CASCADE,
     API_External_ID VARCHAR,
     API_Source VARCHAR,
+    Image_URL VARCHAR,
     Created_By_User_ID UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     Is_Custom BOOLEAN DEFAULT FALSE,
     Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
