@@ -95,7 +95,7 @@ INSERT INTO BodyPart (Name) VALUES
 ('waist');
 
 -- =========================================
--- BODYPART TABLE
+-- EQUIPMENT TABLE
 -- =========================================
 
 CREATE TABLE Equipment (

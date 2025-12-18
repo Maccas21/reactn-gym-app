@@ -1,5 +1,10 @@
 import { useAuth } from "@/src/providers/AuthProvider";
-import { supabase } from "@/src/services/supabase";
+import { fetchAPIExercises } from "@/src/services/exercisedbAPI.service";
+import {
+	fetchCustomExercises,
+	fetchRecentExercises,
+} from "@/src/services/exercises.service";
+import { Exercise } from "@/src/types";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, SectionList, StyleSheet, View } from "react-native";
@@ -11,17 +16,6 @@ import {
 	Text,
 	useTheme,
 } from "react-native-paper";
-
-type Exercise = {
-	exerciseId: string;
-	name: string;
-	gifUrl: string;
-	targetMuscles: string[];
-	bodyParts: string;
-	equipments: string;
-	secondaryMuscles: string[];
-	instructions: string[];
-};
 
 type SectionItem = { title: string; data: Exercise[] };
 
@@ -48,143 +42,71 @@ export default function SearchableCardList({
 	const [sections, setSections] = useState<SectionItem[]>([]);
 	const [query, setQuery] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [hasMoreApi, setHasMoreApi] = useState(true);
 
 	const selectedIdSet = new Set(
 		selectedItems?.map((i) => i.exerciseId) ?? []
 	);
 
-	// ---------------- SUPABASE ----------------
-	const fetchCustomExercises = async () => {
-		if (!session?.user.id) return [];
-
-		const { data, error } = await supabase
-			.from("exercise")
-			.select(
-				`
-			*,
-			body_part:body_part_id (name),
-      		equipment:equipment_id (name),
-			exercisemuscle (
-				is_primary,
-				muscle_id,
-				muscle:muscle_id (name)
-			)`
-			)
-			.eq("created_by_user_id", session.user.id)
-			.order("name", { ascending: true });
-
-		if (error) {
-			console.error("Error fetching custom exercises:", error);
-			return [];
-		}
-
-		const exercises: Exercise[] = (data || []).map((ex: any) => {
-			const primaryMuscles: string[] = [];
-			const secondaryMuscles: string[] = [];
-
-			(ex.exercisemuscle || []).forEach((em: any) => {
-				if (em.is_primary) primaryMuscles.push(em.muscle.name);
-				else secondaryMuscles.push(em.muscle.name);
-			});
-
-			return {
-				exerciseId: ex.exercise_id.toString(),
-				name: ex.name,
-				gifUrl: ex.image_url ?? "",
-				targetMuscles: primaryMuscles,
-				secondaryMuscles: secondaryMuscles,
-				bodyParts: ex.body_part?.name ?? "",
-				equipments: ex.equipment?.name ?? "",
-				instructions: ex.description ?? [],
-			};
-		});
-
-		return exercises;
-	};
-
-	const fetchRecentExercises = async () => {
-		if (!session?.user.id) return [];
-
-		const { data, error } = await supabase
-			.from("exercise")
-			.select(
-				`
-			*,
-			body_part:body_part_id (name),
-      		equipment:equipment_id (name),
-			exercisemuscle (
-				is_primary,
-				muscle_id,
-				muscle:muscle_id (name)
-			)`
-			)
-			.not("last_used", "is", null)
-			.order("last_used", { ascending: false })
-			.limit(5);
-
-		if (error) {
-			console.error("Error fetching recent exercises:", error);
-			return [];
-		}
-
-		const exercises: Exercise[] = (data || []).map((ex: any) => {
-			const primaryMuscles: string[] = [];
-			const secondaryMuscles: string[] = [];
-
-			(ex.exercisemuscle || []).forEach((em: any) => {
-				if (em.is_primary) primaryMuscles.push(em.muscle.name);
-				else secondaryMuscles.push(em.muscle.name);
-			});
-
-			return {
-				exerciseId: ex.exercise_id.toString(),
-				name: ex.name,
-				gifUrl: ex.image_url ?? "",
-				targetMuscles: primaryMuscles,
-				secondaryMuscles: secondaryMuscles,
-				bodyParts: ex.body_part?.name ?? "",
-				equipments: ex.equipment?.name ?? "",
-				instructions: ex.description ?? [],
-			};
-		});
-
-		return exercises;
-	};
-
-	// ---------------- API ----------------
-	const EXERCISEDB_API_URL = process.env.EXPO_PUBLIC_EXERCISEDB_API_URL!;
-
-	const fetchApiExercises = async (searchQuery: string) => {
-		try {
-			const url = `${EXERCISEDB_API_URL}?limit=25&search=${encodeURIComponent(
-				searchQuery
-			)}&sortBy=name&sortOrder=asc`;
-			const res = await fetch(url);
-			const json = await res.json();
-			setApiExercises(json.data ?? []);
-		} catch (error) {
-			console.error("API error:", error);
-		}
-	};
-
 	// ---------------- LOAD SUPABASE ON MOUNT ----------------
 	useEffect(() => {
+		if (!session?.user.id) return;
+
 		const load = async () => {
-			const customs = await fetchCustomExercises();
-			const recents = await fetchRecentExercises();
+			setLoading(true);
+			const customs = await fetchCustomExercises(session.user.id);
+			const recents = await fetchRecentExercises(session.user.id);
 			setCustomExercises(customs);
 			setRecentExercises(recents);
+			setLoading(false);
 		};
+
 		load();
 	}, [session]);
 
 	// ---------------- API FETCH ON QUERY ----------------
 	useEffect(() => {
-		const t = setTimeout(() => {
-			fetchApiExercises(query); // will fetch "" initially too
+		const t = setTimeout(async () => {
+			setLoading(true);
+			try {
+				const apiResults = await fetchAPIExercises(query);
+				setApiExercises(apiResults.data);
+				setHasMoreApi(apiResults.metadata?.nextPage != null);
+			} catch (error) {
+				console.error("Failed to fetch exercises:", error);
+				setApiExercises([]); // optionally clear previous results on error
+				setHasMoreApi(false);
+			} finally {
+				setLoading(false);
+			}
 		}, 300);
+
 		return () => clearTimeout(t);
 	}, [query]);
+
+	// Load more
+	const loadMoreAPIExercises = async () => {
+		if (loadingMore || !hasMoreApi) return;
+
+		setLoadingMore(true);
+		try {
+			const res = await fetchAPIExercises(query, apiExercises.length);
+			setApiExercises((prev) => {
+				const existingIds = new Set(prev.map((i) => i.exerciseId));
+				const newItems = res.data.filter(
+					(i: Exercise) => !existingIds.has(i.exerciseId)
+				);
+				return [...prev, ...newItems];
+			});
+
+			setHasMoreApi(res.metadata?.nextPage != null);
+		} catch (error) {
+			console.error("Failed to load more exercises:", error);
+		} finally {
+			setLoadingMore(false);
+		}
+	};
 
 	// ---------------- BUILD SECTIONS ----------------
 	useEffect(() => {
@@ -229,13 +151,12 @@ export default function SearchableCardList({
 		}
 	};
 
-	// capitalise first letter of each word
-	function capitaliseWords(text: string): string {
-		return text
+	// Capitalize first letter of each word
+	const capitaliseWords = (text: string) =>
+		text
 			.split(" ")
-			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
 			.join(" ");
-	}
 
 	// ---------------- RENDER ITEM ----------------
 	const renderItem = ({ item }: { item: Exercise }) => {
@@ -307,6 +228,16 @@ export default function SearchableCardList({
 					</Text>
 				)}
 				contentContainerStyle={{ paddingBottom: 0 }}
+				onEndReached={loadMoreAPIExercises}
+				onEndReachedThreshold={1} // trigger when 50% from bottom
+				ListFooterComponent={
+					loadingMore ? (
+						<ActivityIndicator
+							size="large"
+							color={theme.colors.primary}
+						/>
+					) : null
+				}
 			/>
 		</View>
 	);
