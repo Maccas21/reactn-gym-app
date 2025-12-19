@@ -5,8 +5,7 @@ import {
 	fetchRecentExercises,
 } from "@/src/services/exercises.service";
 import { Exercise } from "@/src/types";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, SectionList, StyleSheet, View } from "react-native";
 import {
 	Card,
@@ -17,6 +16,61 @@ import {
 	useTheme,
 } from "react-native-paper";
 
+// ---------------- EXERCISE CARD ----------------
+type ExerciseCardProps = {
+	item: Exercise;
+	isSelected: boolean;
+	onPress: (item: Exercise) => void;
+	mode: "single" | "multi";
+	capitaliseWords: (text: string) => string;
+};
+
+const ExerciseCard = React.memo(
+	({
+		item,
+		isSelected,
+		onPress,
+		mode,
+		capitaliseWords,
+	}: ExerciseCardProps) => (
+		<Card style={styles.card} onPress={() => onPress(item)}>
+			<Card.Content style={styles.row}>
+				<View style={{ flex: 1, gap: 5 }}>
+					<Text variant="titleMedium">
+						{capitaliseWords(item.name)}
+					</Text>
+					{item.targetMuscles?.length > 0 && (
+						<Text variant="bodySmall">
+							Muscles:{" "}
+							{capitaliseWords(item.targetMuscles.join(", "))}
+						</Text>
+					)}
+					{item.secondaryMuscles?.length > 0 && (
+						<Text variant="bodySmall">
+							Secondary:{" "}
+							{capitaliseWords(item.secondaryMuscles.join(", "))}
+						</Text>
+					)}
+				</View>
+
+				{mode === "multi" && (
+					<Checkbox
+						status={isSelected ? "checked" : "unchecked"}
+						onPress={() => onPress(item)}
+					/>
+				)}
+
+				<IconButton
+					icon="dots-vertical"
+					onPress={() => console.log("Actions for", item.name)}
+				/>
+			</Card.Content>
+		</Card>
+	),
+	(prev, next) =>
+		prev.isSelected === next.isSelected && prev.item === next.item
+);
+
 type SectionItem = { title: string; data: Exercise[] };
 
 type Props = {
@@ -26,13 +80,13 @@ type Props = {
 	onItemPress?: (item: Exercise) => void;
 };
 
+// ---------------- SEARCHABLE CARD LIST ----------------
 export default function SearchableCardList({
 	mode,
 	selectedItems,
 	onSelect,
 	onItemPress,
 }: Props) {
-	const router = useRouter();
 	const theme = useTheme();
 	const { session } = useAuth();
 
@@ -45,9 +99,23 @@ export default function SearchableCardList({
 	const [loadingMore, setLoadingMore] = useState(false);
 	const [hasMoreApi, setHasMoreApi] = useState(true);
 
-	const selectedIdSet = new Set(
-		selectedItems?.map((i) => i.exerciseId) ?? []
+	// ---------------- GLOBAL SELECTION MAP ----------------
+	const [selectedMap, setSelectedMap] = useState<Map<string, Exercise>>(
+		() => {
+			const map = new Map<string, Exercise>();
+			selectedItems?.forEach((ex) => map.set(ex.exerciseId, ex));
+			return map;
+		}
 	);
+
+	// sync parent selection if selectedItems prop changes
+	useEffect(() => {
+		if (selectedItems) {
+			const map = new Map<string, Exercise>();
+			selectedItems.forEach((ex) => map.set(ex.exerciseId, ex));
+			setSelectedMap(map);
+		}
+	}, [selectedItems]);
 
 	// ---------------- LOAD SUPABASE ON MOUNT ----------------
 	useEffect(() => {
@@ -55,11 +123,16 @@ export default function SearchableCardList({
 
 		const load = async () => {
 			setLoading(true);
-			const customs = await fetchCustomExercises(session.user.id);
-			const recents = await fetchRecentExercises(session.user.id);
-			setCustomExercises(customs);
-			setRecentExercises(recents);
-			setLoading(false);
+			try {
+				const [customs, recents] = await Promise.all([
+					fetchCustomExercises(session.user.id),
+					fetchRecentExercises(session.user.id),
+				]);
+				setCustomExercises(customs);
+				setRecentExercises(recents);
+			} finally {
+				setLoading(false);
+			}
 		};
 
 		load();
@@ -85,8 +158,8 @@ export default function SearchableCardList({
 		return () => clearTimeout(t);
 	}, [query]);
 
-	// Load more
-	const loadMoreAPIExercises = async () => {
+	// ---------------- LOAD MORE API ----------------
+	const loadMoreAPIExercises = useCallback(async () => {
 		if (loadingMore || !hasMoreApi) return;
 
 		setLoadingMore(true);
@@ -106,7 +179,7 @@ export default function SearchableCardList({
 		} finally {
 			setLoadingMore(false);
 		}
-	};
+	}, [loadingMore, hasMoreApi, query, apiExercises.length]);
 
 	// ---------------- BUILD SECTIONS ----------------
 	useEffect(() => {
@@ -137,68 +210,51 @@ export default function SearchableCardList({
 	}, [query, customExercises, recentExercises, apiExercises]);
 
 	// ---------------- HANDLE PRESS ----------------
-	const handlePress = (item: Exercise) => {
-		if (mode === "multi" && onSelect && selectedItems) {
-			const exists = selectedItems.some(
-				(i) => i.exerciseId === item.exerciseId
-			);
-			const next = exists
-				? selectedItems.filter((i) => i.exerciseId !== item.exerciseId)
-				: [...selectedItems, item];
-			onSelect(next);
-		} else {
-			onItemPress?.(item);
-		}
-	};
+	const handlePress = useCallback(
+		(item: Exercise) => {
+			setSelectedMap((prev) => {
+				const newMap = new Map(prev);
+				if (newMap.has(item.exerciseId)) newMap.delete(item.exerciseId);
+				else newMap.set(item.exerciseId, item);
 
-	// Capitalize first letter of each word
-	const capitaliseWords = (text: string) =>
-		text
-			.split(" ")
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-			.join(" ");
+				// if onSelect was defined
+				if (onSelect) {
+					onSelect(Array.from(newMap.values()));
+				}
+
+				return newMap;
+			});
+
+			if (mode === "single" && onItemPress) {
+				onItemPress(item);
+			}
+		},
+		[onSelect, onItemPress, mode]
+	);
+
+	// ---------------- CAPITALISE WORDS ----------------
+	const capitaliseWords = useCallback(
+		(text: string) =>
+			text
+				.split(" ")
+				.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+				.join(" "),
+		[]
+	);
 
 	// ---------------- RENDER ITEM ----------------
-	const renderItem = ({ item }: { item: Exercise }) => {
-		const isSelected = selectedIdSet.has(item.exerciseId);
-		return (
-			<Card style={styles.card} onPress={() => handlePress(item)}>
-				<Card.Content style={styles.row}>
-					<View style={{ flex: 1, gap: 5 }}>
-						<Text variant="titleMedium">
-							{capitaliseWords(item.name)}
-						</Text>
-						{item.targetMuscles?.length > 0 && (
-							<Text variant="bodySmall">
-								Muscles:{" "}
-								{capitaliseWords(item.targetMuscles.join(", "))}
-							</Text>
-						)}
-						{item.secondaryMuscles?.length > 0 && (
-							<Text variant="bodySmall">
-								Secondary:{" "}
-								{capitaliseWords(
-									item.secondaryMuscles.join(", ")
-								)}
-							</Text>
-						)}
-					</View>
-
-					{mode === "multi" && (
-						<Checkbox
-							status={isSelected ? "checked" : "unchecked"}
-							onPress={() => handlePress(item)}
-						/>
-					)}
-
-					<IconButton
-						icon="dots-vertical"
-						onPress={() => console.log("Actions for", item.name)}
-					/>
-				</Card.Content>
-			</Card>
-		);
-	};
+	const renderItem = useCallback(
+		({ item }: { item: Exercise }) => (
+			<ExerciseCard
+				item={item}
+				isSelected={selectedMap.has(item.exerciseId)}
+				onPress={handlePress}
+				mode={mode}
+				capitaliseWords={capitaliseWords}
+			/>
+		),
+		[selectedMap, handlePress, mode, capitaliseWords]
+	);
 
 	// ---------------- RENDER ----------------
 	return (
@@ -218,31 +274,34 @@ export default function SearchableCardList({
 				/>
 			)}
 
-			<SectionList
-				sections={sections}
-				keyExtractor={(item) => item.exerciseId}
-				renderItem={renderItem}
-				renderSectionHeader={({ section: { title } }) => (
-					<Text style={{ margin: 10, fontWeight: "bold" }}>
-						{title}
-					</Text>
-				)}
-				contentContainerStyle={{ paddingBottom: 0 }}
-				onEndReached={loadMoreAPIExercises}
-				onEndReachedThreshold={1} // trigger when 50% from bottom
-				ListFooterComponent={
-					loadingMore ? (
-						<ActivityIndicator
-							size="large"
-							color={theme.colors.primary}
-						/>
-					) : null
-				}
-			/>
+			{!loading && (
+				<SectionList
+					sections={sections}
+					keyExtractor={(item) => item.exerciseId}
+					renderItem={renderItem}
+					renderSectionHeader={({ section: { title } }) => (
+						<Text style={{ margin: 10, fontWeight: "bold" }}>
+							{title}
+						</Text>
+					)}
+					contentContainerStyle={{ paddingBottom: 0 }}
+					onEndReached={loadMoreAPIExercises}
+					onEndReachedThreshold={0.5} // trigger when 50% from bottom
+					ListFooterComponent={
+						loadingMore ? (
+							<ActivityIndicator
+								size="large"
+								color={theme.colors.primary}
+							/>
+						) : null
+					}
+				/>
+			)}
 		</View>
 	);
 }
 
+// ---------------- STYLES ----------------
 const styles = StyleSheet.create({
 	searchBar: {
 		margin: 10,
