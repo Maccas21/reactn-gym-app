@@ -113,6 +113,32 @@ export default function SearchableCardList({
 		}
 	}, [selectedItems]);
 
+	// ---------------- BUILD SECTIONS ----------------
+	const sections = useMemo(() => {
+		const filteredCustoms = customExercises.filter((ex) => {
+			const q = query.toLowerCase();
+			return (
+				ex.name.toLowerCase().includes(q) ||
+				ex.targetMuscles?.some((m) => m.toLowerCase().includes(q)) ||
+				ex.secondaryMuscles?.some((m) => m.toLowerCase().includes(q)) ||
+				ex.bodyParts?.toLowerCase().includes(q) ||
+				ex.equipments?.toLowerCase().includes(q)
+			);
+		});
+
+		return [
+			...(query === "" && recentExercises.length > 0
+				? [{ title: "Recents", data: recentExercises }]
+				: []),
+			filteredCustoms.length > 0
+				? { title: "Custom Exercises", data: filteredCustoms }
+				: null,
+			apiExercises.length > 0
+				? { title: "Exercises", data: apiExercises }
+				: null,
+		].filter(Boolean) as SectionItem[];
+	}, [query, customExercises, recentExercises, apiExercises]);
+
 	// ---------------- LOAD SUPABASE ON MOUNT ----------------
 	useEffect(() => {
 		if (!session?.user.id) return;
@@ -176,32 +202,6 @@ export default function SearchableCardList({
 			setLoadingMore(false);
 		}
 	}, [loadingMore, hasMoreApi, query]);
-
-	// ---------------- BUILD SECTIONS ----------------
-	const sections = useMemo(() => {
-		const filteredCustoms = customExercises.filter((ex) => {
-			const q = query.toLowerCase();
-			return (
-				ex.name.toLowerCase().includes(q) ||
-				ex.targetMuscles?.some((m) => m.toLowerCase().includes(q)) ||
-				ex.secondaryMuscles?.some((m) => m.toLowerCase().includes(q)) ||
-				ex.bodyParts?.toLowerCase().includes(q) ||
-				ex.equipments?.toLowerCase().includes(q)
-			);
-		});
-
-		return [
-			...(query === "" && recentExercises.length > 0
-				? [{ title: "Recents", data: recentExercises }]
-				: []),
-			filteredCustoms.length > 0
-				? { title: "Custom Exercises", data: filteredCustoms }
-				: null,
-			apiExercises.length > 0
-				? { title: "Exercises", data: apiExercises }
-				: null,
-		].filter(Boolean) as SectionItem[];
-	}, [query, customExercises, recentExercises, apiExercises]);
 
 	// ---------------- HANDLE PRESS ----------------
 	const handlePress = useCallback(
