@@ -7,4 +7,5 @@ export type Exercise = {
 	equipments: string;
 	secondaryMuscles: string[];
 	instructions: string[];
+	isCustom: boolean;
 };

@@ -1,5 +1,5 @@
+import { supabase } from "@/src/services/supabase";
 import { Exercise } from "@/src/types";
-import { supabase } from "./supabase";
 
 function mapExerciseRows(rows: any[]): Exercise[] {
 	return rows.map((ex) => {
@@ -20,6 +20,7 @@ function mapExerciseRows(rows: any[]): Exercise[] {
 			bodyParts: ex.body_part?.name ?? "",
 			equipments: ex.equipment?.name ?? "",
 			instructions: ex.description ?? [],
+			isCustom: ex.is_custom ?? false,
 		};
 	});
 }
@@ -67,6 +68,7 @@ export async function fetchRecentExercises(
 			)
 		`
 		)
+		.or(`created_by_user_id.eq.${userId},created_by_user_id.is.null`)
 		.not("last_used", "is", null)
 		.order("last_used", { ascending: false })
 		.limit(5);

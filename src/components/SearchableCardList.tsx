@@ -1,3 +1,5 @@
+import { ExerciseCard } from "@/src/components/ui/ExerciseCard";
+import { FilterChips } from "@/src/components/ui/FilterChips";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { fetchAPIExercises } from "@/src/services/exercisedbAPI.service";
 import {
@@ -7,66 +9,7 @@ import {
 import { Exercise } from "@/src/types";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, SectionList, StyleSheet, View } from "react-native";
-import {
-	Card,
-	Checkbox,
-	IconButton,
-	Searchbar,
-	Text,
-	useTheme,
-} from "react-native-paper";
-
-// ---------------- EXERCISE CARD ----------------
-type ExerciseCardProps = {
-	item: Exercise;
-	isSelected: boolean;
-	onPress: (item: Exercise) => void;
-	onPressDots?: (item: Exercise) => void;
-	mode: "single" | "multi";
-};
-
-const ExerciseCard = React.memo(
-	({
-		item,
-		isSelected,
-		onPress,
-		onPressDots = () => {},
-		mode,
-	}: ExerciseCardProps) => (
-		<Card style={styles.card} onPress={() => onPress(item)}>
-			<Card.Content style={styles.row}>
-				<View style={{ flex: 1, gap: 5 }}>
-					<Text variant="titleMedium">{item.name}</Text>
-					{item.targetMuscles?.length > 0 && (
-						<Text variant="bodySmall">
-							Muscles: {item.targetMuscles.join(", ")}
-						</Text>
-					)}
-					{item.secondaryMuscles?.length > 0 && (
-						<Text variant="bodySmall">
-							Secondary: {item.secondaryMuscles.join(", ")}
-						</Text>
-					)}
-				</View>
-
-				{mode === "multi" && (
-					<Checkbox status={isSelected ? "checked" : "unchecked"} />
-				)}
-
-				<IconButton
-					icon="dots-vertical"
-					onPress={(e) => {
-						e.stopPropagation(); // Stops card onPress from firing
-						onPressDots(item);
-						console.log("Actions for", item.name);
-					}}
-				/>
-			</Card.Content>
-		</Card>
-	),
-	(prev, next) =>
-		prev.isSelected === next.isSelected && prev.item === next.item
-);
+import { Searchbar, Text, useTheme } from "react-native-paper";
 
 type SectionItem = { title: string; data: Exercise[] };
 
@@ -94,6 +37,7 @@ export default function SearchableCardList({
 	const [loading, setLoading] = useState(false);
 	const [loadingMore, setLoadingMore] = useState(false);
 	const [hasMoreApi, setHasMoreApi] = useState(true);
+	const [bodypartFilters, setBodypartFilters] = useState<string[]>([]);
 
 	// ---------------- GLOBAL SELECTION MAP ----------------
 	const [selectedMap, setSelectedMap] = useState<Map<string, Exercise>>(
@@ -113,31 +57,75 @@ export default function SearchableCardList({
 		}
 	}, [selectedItems]);
 
+	const bodyParts = [
+		"back",
+		"cardio",
+		"chest",
+		"lower arms",
+		"lower legs",
+		"neck",
+		"shoulders",
+		"upper arms",
+		"upper legs",
+		"waist",
+	];
+
+	// ---------------- FILTER MATCH BODYPART HELPER ----------------
+	const matchesBodypartFilters = useCallback(
+		(ex: Exercise) => {
+			if (bodypartFilters.length === 0) return true; // no filters = allow all
+			if (!ex.bodyParts) return false;
+
+			// Normalize to array of strings
+			const parts: string[] = Array.isArray(ex.bodyParts)
+				? ex.bodyParts
+				: [ex.bodyParts];
+
+			// Compare lowercase
+			return parts.some((p) => bodypartFilters.includes(p.toLowerCase()));
+		},
+		[bodypartFilters]
+	);
+
 	// ---------------- BUILD SECTIONS ----------------
 	const sections = useMemo(() => {
-		const filteredCustoms = customExercises.filter((ex) => {
-			const q = query.toLowerCase();
-			return (
-				ex.name.toLowerCase().includes(q) ||
-				ex.targetMuscles?.some((m) => m.toLowerCase().includes(q)) ||
-				ex.secondaryMuscles?.some((m) => m.toLowerCase().includes(q)) ||
-				ex.bodyParts?.toLowerCase().includes(q) ||
-				ex.equipments?.toLowerCase().includes(q)
+		const q = query.toLowerCase();
+
+		const matchesQuery = (ex: Exercise) =>
+			ex.name.toLowerCase().includes(q) ||
+			ex.targetMuscles?.some((m) => m.toLowerCase().includes(q)) ||
+			ex.secondaryMuscles?.some((m) => m.toLowerCase().includes(q)) ||
+			ex.bodyParts?.toLowerCase().includes(q) ||
+			ex.equipments?.toLowerCase().includes(q);
+
+		const filterAndSearch = (exercises: Exercise[]) =>
+			exercises.filter(
+				(ex) => matchesQuery(ex) && matchesBodypartFilters(ex)
 			);
-		});
+
+		const filteredRecents = filterAndSearch(recentExercises);
+		const filteredCustoms = filterAndSearch(customExercises);
+		const filteredApi = apiExercises.filter(matchesBodypartFilters);
 
 		return [
-			...(query === "" && recentExercises.length > 0
-				? [{ title: "Recents", data: recentExercises }]
+			...(query === "" && filteredRecents.length > 0
+				? [{ title: "Recents", data: filteredRecents }]
 				: []),
 			filteredCustoms.length > 0
 				? { title: "Custom Exercises", data: filteredCustoms }
 				: null,
-			apiExercises.length > 0
-				? { title: "Exercises", data: apiExercises }
+			filteredApi.length > 0
+				? { title: "Exercises", data: filteredApi }
 				: null,
 		].filter(Boolean) as SectionItem[];
-	}, [query, customExercises, recentExercises, apiExercises]);
+	}, [
+		query,
+		bodypartFilters,
+		customExercises,
+		recentExercises,
+		apiExercises,
+		matchesBodypartFilters,
+	]);
 
 	// ---------------- LOAD SUPABASE ON MOUNT ----------------
 	useEffect(() => {
@@ -150,8 +138,8 @@ export default function SearchableCardList({
 					fetchCustomExercises(session.user.id),
 					fetchRecentExercises(session.user.id),
 				]);
-				setCustomExercises(capitaliseInExercises(customs));
-				setRecentExercises(capitaliseInExercises(recents));
+				setCustomExercises(customs);
+				setRecentExercises(recents);
 			} finally {
 				setLoading(false);
 			}
@@ -166,7 +154,7 @@ export default function SearchableCardList({
 			setLoading(true);
 			try {
 				const apiResults = await fetchAPIExercises(query);
-				setApiExercises(capitaliseInExercises(apiResults.data));
+				setApiExercises(apiResults.data);
 				setHasMoreApi(apiResults.metadata?.nextPage != null);
 			} catch (error) {
 				console.error("Failed to fetch exercises:", error);
@@ -178,7 +166,7 @@ export default function SearchableCardList({
 		}, 300);
 
 		return () => clearTimeout(t);
-	}, [query]);
+	}, [query, bodypartFilters]);
 
 	// ---------------- LOAD MORE API ----------------
 	const loadMoreAPIExercises = useCallback(async () => {
@@ -192,7 +180,7 @@ export default function SearchableCardList({
 				const newItems = res.data.filter(
 					(i: Exercise) => !existingIds.has(i.exerciseId)
 				);
-				return [...prev, ...capitaliseInExercises(newItems)];
+				return [...prev, ...newItems];
 			});
 
 			setHasMoreApi(res.metadata?.nextPage != null);
@@ -201,7 +189,7 @@ export default function SearchableCardList({
 		} finally {
 			setLoadingMore(false);
 		}
-	}, [loadingMore, hasMoreApi, query]);
+	}, [loadingMore, hasMoreApi, query, bodypartFilters]);
 
 	// ---------------- HANDLE PRESS ----------------
 	const handlePress = useCallback(
@@ -226,41 +214,8 @@ export default function SearchableCardList({
 		[onSelect, onItemPress, mode]
 	);
 
-	// ---------------- CAPITALISE WORDS ----------------
-	const capitaliseWords = useCallback((text: string) => {
-		return text
-			.split(" ") // Split by spaces
-			.map(
-				(word) =>
-					word
-						.split("-") // Split hyphenated words
-						.map(
-							(part) =>
-								part.charAt(0).toUpperCase() + part.slice(1)
-						)
-						.join("-") // Join hyphenated parts
-			)
-			.map((word) =>
-				// Capitalise inside brackets if present
-				word.replace(/\((\w)/g, (_, c) => `(${c.toUpperCase()}`)
-			)
-			.join(" ");
-	}, []);
-
-	const capitaliseInExercises = useCallback(
-		(exercises: Exercise[]): Exercise[] => {
-			return exercises.map((ex) => ({
-				...ex,
-				name: capitaliseWords(ex.name),
-				targetMuscles: ex.targetMuscles.map(capitaliseWords),
-				secondaryMuscles: ex.secondaryMuscles.map(capitaliseWords),
-			}));
-		},
-		[capitaliseWords]
-	);
-
-	// ---------------- RENDER ITEM ----------------
-	const renderItem = useCallback(
+	// ---------------- RENDER CARDS ----------------
+	const renderCard = useCallback(
 		({ item }: { item: Exercise }) => (
 			<ExerciseCard
 				item={item}
@@ -282,6 +237,14 @@ export default function SearchableCardList({
 				style={styles.searchBar}
 			/>
 
+			<FilterChips
+				chipWords={bodyParts}
+				onFilterChange={(selected) => {
+					setBodypartFilters(selected);
+					console.log("Selected items:", selected);
+				}}
+			/>
+
 			{loading && (
 				<ActivityIndicator
 					size="large"
@@ -294,7 +257,7 @@ export default function SearchableCardList({
 				<SectionList
 					sections={sections}
 					keyExtractor={(item) => item.exerciseId}
-					renderItem={renderItem}
+					renderItem={renderCard}
 					renderSectionHeader={({ section: { title } }) => (
 						<Text style={{ margin: 10, fontWeight: "bold" }}>
 							{title}
@@ -321,16 +284,5 @@ export default function SearchableCardList({
 const styles = StyleSheet.create({
 	searchBar: {
 		margin: 10,
-	},
-	card: {
-		marginHorizontal: 10,
-		marginVertical: 5,
-		padding: 0,
-	},
-	row: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingHorizontal: 10,
-		paddingVertical: 5,
 	},
 });

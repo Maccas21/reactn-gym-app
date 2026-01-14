@@ -52,6 +52,8 @@ INSERT INTO Muscle (Name) VALUES
 ('levator scapulae'),
 ('lower abs'),
 ('lower back'),
+('middle back'),
+('neck'),
 ('obliques'),
 ('pectorals'),
 ('quadriceps'),
@@ -106,18 +108,26 @@ CREATE TABLE Equipment (
 INSERT INTO Equipment (Name) VALUES
 ('assisted'),
 ('band'),
+('bands'),
 ('barbell'),
+('body only'),
 ('body weight'),
 ('bosu ball'),
 ('cable'),
 ('dumbbell'),
+('e-z curl bar'),
 ('elliptical machine'),
+('exercise ball'),
 ('ez barbell'),
+('foam roll'),
 ('hammer'),
 ('kettlebell'),
+('kettlebells'),
 ('leverage machine'),
+('machine'),
 ('medicine ball'),
 ('olympic barbell'),
+('other'),
 ('resistance band'),
 ('roller'),
 ('rope'),
@@ -137,6 +147,21 @@ INSERT INTO Equipment (Name) VALUES
 -- EXERCISE TABLE
 -- =========================================
 
+-- force
+CREATE TYPE force_enum AS ENUM ('pull', 'push', 'static');
+
+-- level
+CREATE TYPE level_enum AS ENUM ('beginner', 'intermediate', 'expert');
+
+-- mechanic
+CREATE TYPE mechanic_enum AS ENUM ('compound', 'isolation');
+
+-- category
+CREATE TYPE category_enum AS ENUM (
+    'cardio', 'strength', 'powerlifting', 'plyometrics', 
+    'olympic weightlifting', 'stretching', 'strongman'
+);
+
 CREATE TABLE Exercise (
     Exercise_ID SERIAL PRIMARY KEY,
     Name VARCHAR NOT NULL,
@@ -148,6 +173,10 @@ CREATE TABLE Exercise (
     Image_URL VARCHAR,
     Created_By_User_ID UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     Is_Custom BOOLEAN DEFAULT FALSE,
+    Force force_enum,
+    Level level_enum,
+    Mechanic mechanic_enum,
+    Category category_enum,
     Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Updated_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	Last_Used TIMESTAMP,
