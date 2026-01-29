@@ -8,4 +8,8 @@ export type Exercise = {
 	secondaryMuscles: string[];
 	instructions: string[];
 	isCustom: boolean;
+	force: string;
+	level: string;
+	mechanic: string;
+	category: string;
 };

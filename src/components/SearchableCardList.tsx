@@ -1,11 +1,11 @@
 import { ExerciseCard } from "@/src/components/ui/ExerciseCard";
 import { FilterChips } from "@/src/components/ui/FilterChips";
 import { useAuth } from "@/src/providers/AuthProvider";
-import { fetchAPIExercises } from "@/src/services/exercisedbAPI.service";
 import {
 	fetchCustomExercises,
 	fetchRecentExercises,
 } from "@/src/services/exercises.service";
+import { fetchWrkoutExercises } from "@/src/services/wrkoutExercises.service";
 import { Exercise } from "@/src/types";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, SectionList, StyleSheet, View } from "react-native";
@@ -35,8 +35,6 @@ export default function SearchableCardList({
 	const [apiExercises, setApiExercises] = useState<Exercise[]>([]);
 	const [query, setQuery] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [loadingMore, setLoadingMore] = useState(false);
-	const [hasMoreApi, setHasMoreApi] = useState(true);
 	const [bodypartFilters, setBodypartFilters] = useState<string[]>([]);
 
 	// ---------------- GLOBAL SELECTION MAP ----------------
@@ -105,7 +103,7 @@ export default function SearchableCardList({
 
 		const filteredRecents = filterAndSearch(recentExercises);
 		const filteredCustoms = filterAndSearch(customExercises);
-		const filteredApi = apiExercises.filter(matchesBodypartFilters);
+		const filteredApi = filterAndSearch(apiExercises);
 
 		return [
 			...(query === "" && filteredRecents.length > 0
@@ -153,13 +151,11 @@ export default function SearchableCardList({
 		const t = setTimeout(async () => {
 			setLoading(true);
 			try {
-				const apiResults = await fetchAPIExercises(query);
-				setApiExercises(apiResults.data);
-				setHasMoreApi(apiResults.metadata?.nextPage != null);
+				const apiResults = await fetchWrkoutExercises();
+				setApiExercises(apiResults);
 			} catch (error) {
 				console.error("Failed to fetch exercises:", error);
 				setApiExercises([]); // Optionally clear previous results on error
-				setHasMoreApi(false);
 			} finally {
 				setLoading(false);
 			}
@@ -167,29 +163,6 @@ export default function SearchableCardList({
 
 		return () => clearTimeout(t);
 	}, [query, bodypartFilters]);
-
-	// ---------------- LOAD MORE API ----------------
-	const loadMoreAPIExercises = useCallback(async () => {
-		if (loadingMore || !hasMoreApi) return;
-
-		setLoadingMore(true);
-		try {
-			const res = await fetchAPIExercises(query, apiExercises.length);
-			setApiExercises((prev) => {
-				const existingIds = new Set(prev.map((i) => i.exerciseId));
-				const newItems = res.data.filter(
-					(i: Exercise) => !existingIds.has(i.exerciseId)
-				);
-				return [...prev, ...newItems];
-			});
-
-			setHasMoreApi(res.metadata?.nextPage != null);
-		} catch (error) {
-			console.error("Failed to load more exercises:", error);
-		} finally {
-			setLoadingMore(false);
-		}
-	}, [loadingMore, hasMoreApi, query, bodypartFilters]);
 
 	// ---------------- HANDLE PRESS ----------------
 	const handlePress = useCallback(
@@ -264,16 +237,6 @@ export default function SearchableCardList({
 						</Text>
 					)}
 					contentContainerStyle={{ paddingBottom: 0 }}
-					onEndReached={loadMoreAPIExercises}
-					onEndReachedThreshold={0.5} // Trigger when 50% from bottom
-					ListFooterComponent={
-						loadingMore ? (
-							<ActivityIndicator
-								size="large"
-								color={theme.colors.primary}
-							/>
-						) : null
-					}
 				/>
 			)}
 		</View>

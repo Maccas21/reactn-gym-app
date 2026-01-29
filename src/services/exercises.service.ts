@@ -21,6 +21,10 @@ function mapExerciseRows(rows: any[]): Exercise[] {
 			equipments: ex.equipment?.name ?? "",
 			instructions: ex.description ?? [],
 			isCustom: ex.is_custom ?? false,
+			force: ex.force ?? "",
+			level: ex.level ?? "",
+			mechanic: ex.mechanic ?? "",
+			category: ex.category ?? "",
 		};
 	});
 }
