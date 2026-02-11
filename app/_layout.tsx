@@ -4,6 +4,7 @@ import * as NavigationBar from "expo-navigation-bar";
 import { Slot } from "expo-router";
 import { useEffect, useState } from "react";
 import { StatusBar } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -19,19 +20,21 @@ export default function RootLayout() {
 	};
 
 	return (
-		<SafeAreaProvider>
-			<PaperProvider theme={theme}>
-				<StatusBar
-					barStyle={theme.dark ? "light-content" : "dark-content"}
-					backgroundColor={theme.colors.background}
-				/>
+		<GestureHandlerRootView>
+			<SafeAreaProvider>
+				<PaperProvider theme={theme}>
+					<StatusBar
+						barStyle={theme.dark ? "light-content" : "dark-content"}
+						backgroundColor={theme.colors.background}
+					/>
 
-				<AuthProvider>
-					<MessageProvider>
-						<Slot />
-					</MessageProvider>
-				</AuthProvider>
-			</PaperProvider>
-		</SafeAreaProvider>
+					<AuthProvider>
+						<MessageProvider>
+							<Slot />
+						</MessageProvider>
+					</AuthProvider>
+				</PaperProvider>
+			</SafeAreaProvider>
+		</GestureHandlerRootView>
 	);
 }

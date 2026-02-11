@@ -43,7 +43,7 @@ export default function SearchableCardList({
 			const map = new Map<string, Exercise>();
 			selectedItems?.forEach((ex) => map.set(ex.exerciseId, ex));
 			return map;
-		}
+		},
 	);
 
 	// Sync parent selection if selectedItems prop changes
@@ -82,7 +82,7 @@ export default function SearchableCardList({
 			// Compare lowercase
 			return parts.some((p) => bodypartFilters.includes(p.toLowerCase()));
 		},
-		[bodypartFilters]
+		[bodypartFilters],
 	);
 
 	// ---------------- BUILD SECTIONS ----------------
@@ -98,7 +98,7 @@ export default function SearchableCardList({
 
 		const filterAndSearch = (exercises: Exercise[]) =>
 			exercises.filter(
-				(ex) => matchesQuery(ex) && matchesBodypartFilters(ex)
+				(ex) => matchesQuery(ex) && matchesBodypartFilters(ex),
 			);
 
 		const filteredRecents = filterAndSearch(recentExercises);
@@ -184,7 +184,7 @@ export default function SearchableCardList({
 				onItemPress(item);
 			}
 		},
-		[onSelect, onItemPress, mode]
+		[onSelect, onItemPress, mode],
 	);
 
 	// ---------------- RENDER CARDS ----------------
@@ -197,7 +197,7 @@ export default function SearchableCardList({
 				mode={mode}
 			/>
 		),
-		[selectedMap, handlePress, mode]
+		[selectedMap, handlePress, mode],
 	);
 
 	// ---------------- RENDER ----------------
@@ -214,7 +214,7 @@ export default function SearchableCardList({
 				chipWords={bodyParts}
 				onFilterChange={(selected) => {
 					setBodypartFilters(selected);
-					console.log("Selected items:", selected);
+					//console.log("Selected items:", selected);
 				}}
 			/>
 
