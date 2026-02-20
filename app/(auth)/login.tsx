@@ -2,7 +2,7 @@ import { useAuth } from "@/src/providers/AuthProvider";
 import { useMessage } from "@/src/providers/MessageProvider";
 import { supabase } from "@/src/services/supabase";
 import { Redirect, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
 	ActivityIndicator,
@@ -22,6 +22,7 @@ export default function Login() {
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [mode, setMode] = useState<"login" | "signup">("login");
+	const passwordInputRef = useRef<any>(null);
 
 	// Still restoring session? show loader
 	if (authLoading) {
@@ -175,15 +176,20 @@ export default function Login() {
 				mode="outlined"
 				autoCapitalize="none"
 				keyboardType="email-address"
+				returnKeyType="next"
+				onSubmitEditing={() => passwordInputRef.current?.focus()}
 			/>
 
 			{/* Password */}
 			<TextInput
+				ref={passwordInputRef}
 				label="Password"
 				value={password}
 				onChangeText={setPassword}
 				mode="outlined"
 				secureTextEntry
+				returnKeyType="done"
+				onSubmitEditing={mode === "login" ? handleLogin : handleSignUp}
 			/>
 
 			{/* Main button */}

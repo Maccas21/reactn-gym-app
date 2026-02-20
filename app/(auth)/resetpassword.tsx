@@ -78,6 +78,7 @@ export default function ResetPassword() {
 				title: "Error",
 				message: verifyResponse.error.message,
 			});
+			supabase.auth.signOut();
 			return;
 		}
 
@@ -93,6 +94,7 @@ export default function ResetPassword() {
 				title: "Error",
 				message: updateResponse.error.message,
 			});
+			supabase.auth.signOut();
 			return;
 		}
 
@@ -140,6 +142,7 @@ export default function ResetPassword() {
 				onChangeText={setEmail}
 				autoCapitalize="none"
 				keyboardType="email-address"
+				onSubmitEditing={handleSendCode}
 			/>
 
 			<TextInput
@@ -151,18 +154,24 @@ export default function ResetPassword() {
 			/>
 
 			<TextInput
+				disabled={code.length === 0}
 				label="New Password"
 				mode="outlined"
 				value={newPassword}
 				onChangeText={setNewPassword}
 				secureTextEntry
+				onSubmitEditing={handleResetPassword}
 			/>
 
 			<Button mode="contained" onPress={handleSendCode}>
 				Send / Resend Code
 			</Button>
 
-			<Button mode="contained" onPress={handleResetPassword}>
+			<Button
+				disabled={newPassword.length === 0}
+				mode="contained"
+				onPress={handleResetPassword}
+			>
 				Reset Password
 			</Button>
 
