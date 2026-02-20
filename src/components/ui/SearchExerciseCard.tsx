@@ -3,7 +3,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Card, Checkbox, IconButton, Text } from "react-native-paper";
 
-type ExerciseCardProps = {
+type SearchExerciseCardProps = {
 	item: Exercise;
 	isSelected: boolean;
 	onPress: (item: Exercise) => void;
@@ -11,14 +11,14 @@ type ExerciseCardProps = {
 	mode: "single" | "multi";
 };
 
-export const ExerciseCard = React.memo(
+export const SearchExerciseCard = React.memo(
 	({
 		item,
 		isSelected,
 		onPress,
 		onPressDots = () => {},
 		mode,
-	}: ExerciseCardProps) => (
+	}: SearchExerciseCardProps) => (
 		<Card style={styles.card} onPress={() => onPress(item)}>
 			<Card.Content style={styles.row}>
 				<View style={{ flex: 1, gap: 5 }}>
@@ -70,7 +70,7 @@ export const ExerciseCard = React.memo(
 		</Card>
 	),
 	(prev, next) =>
-		prev.isSelected === next.isSelected && prev.item === next.item
+		prev.isSelected === next.isSelected && prev.item === next.item,
 );
 
 // ---------------- STYLES ----------------

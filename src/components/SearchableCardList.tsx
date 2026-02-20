@@ -1,5 +1,5 @@
-import { ExerciseCard } from "@/src/components/ui/ExerciseCard";
 import { FilterChips } from "@/src/components/ui/FilterChips";
+import { SearchExerciseCard } from "@/src/components/ui/SearchExerciseCard";
 import { useAuth } from "@/src/providers/AuthProvider";
 import {
 	fetchCustomExercises,
@@ -190,7 +190,7 @@ export default function SearchableCardList({
 	// ---------------- RENDER CARDS ----------------
 	const renderCard = useCallback(
 		({ item }: { item: Exercise }) => (
-			<ExerciseCard
+			<SearchExerciseCard
 				item={item}
 				isSelected={selectedMap.has(item.exerciseId)}
 				onPress={handlePress}
