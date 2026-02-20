@@ -1,6 +1,7 @@
 import SearchableCardList from "@/src/components/SearchableCardList";
+import { useSelectedExercises } from "@/src/providers/SelectedExercisesProvider";
 import { Exercise } from "@/src/types";
-import { useNavigation } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import DraggableFlatList, {
@@ -19,7 +20,10 @@ export default function AddExercise() {
 	const theme = useTheme();
 	const navigation = useNavigation();
 
-	const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
+	const [localSelectedExercises, setLocalSelectedExercises] = useState<
+		Exercise[]
+	>([]);
+	const { selectedExercises, setSelectedExercises } = useSelectedExercises();
 	const [modalVisible, setModalVisible] = useState(false);
 	const [listHeight, setListHeight] = useState(0);
 	const [bottomBarHeight, setBottomBarHeight] = useState(0);
@@ -38,18 +42,40 @@ export default function AddExercise() {
 	}, [navigation]);
 
 	const handleClear = () => {
-		if (selectedExercises.length === 0) return;
+		if (localSelectedExercises.length === 0) return;
 
-		setSelectedExercises([]);
+		setLocalSelectedExercises([]);
 		setModalVisible(false);
 	};
 
+	const handleAdd = () => {
+		// Append to the end of the list. Prevent two in a row
+		setSelectedExercises((prev) => {
+			if (prev.length === 0) return [...localSelectedExercises];
+
+			const lastPrev = prev[prev.length - 1];
+			const firstLocal = localSelectedExercises[0];
+
+			const shouldRemoveFirst =
+				firstLocal && lastPrev.exerciseId === firstLocal.exerciseId;
+
+			const adjustedLocal = shouldRemoveFirst
+				? localSelectedExercises.slice(1)
+				: localSelectedExercises;
+
+			return [...prev, ...adjustedLocal];
+		});
+
+		router.dismissAll();
+	};
+
 	const toggleSheet = () => {
-		if (selectedExercises.length === 0) return;
+		if (localSelectedExercises.length === 0) return;
 
 		setModalVisible((prev) => !prev);
 	};
 
+	// Show/Hide modal
 	useEffect(() => {
 		Animated.timing(bottomSheetAnim, {
 			toValue: modalVisible ? 1 : 0, // 1 = visible, 0 = hidden
@@ -58,8 +84,13 @@ export default function AddExercise() {
 		}).start();
 	}, [modalVisible]);
 
+	//Auto close modal when all exercises are deselected
+	useEffect(() => {
+		if (localSelectedExercises.length === 0) setModalVisible(false);
+	}, [localSelectedExercises.length]);
+
 	const removeExercise = (id: string) => {
-		setSelectedExercises((prev) =>
+		setLocalSelectedExercises((prev) =>
 			prev.filter((ex) => ex.exerciseId !== id),
 		);
 	};
@@ -80,7 +111,11 @@ export default function AddExercise() {
 				},
 			]}
 		>
-			<IconButton icon="drag" style={styles.icon} onLongPress={drag} />
+			<IconButton
+				icon="drag-horizontal-variant"
+				style={styles.icon}
+				onPressIn={drag}
+			/>
 
 			<Text style={styles.itemText}>{item.name}</Text>
 
@@ -104,8 +139,8 @@ export default function AddExercise() {
 			>
 				<SearchableCardList
 					mode="multi"
-					selectedItems={selectedExercises}
-					onSelect={setSelectedExercises}
+					selectedItems={localSelectedExercises}
+					onSelect={setLocalSelectedExercises}
 				/>
 
 				<Animated.View
@@ -133,10 +168,12 @@ export default function AddExercise() {
 					</Text>
 
 					<DraggableFlatList
-						data={selectedExercises}
+						data={localSelectedExercises}
 						renderItem={renderItem}
 						keyExtractor={(item) => item.exerciseId}
-						onDragEnd={({ data }) => setSelectedExercises(data)}
+						onDragEnd={({ data }) =>
+							setLocalSelectedExercises(data)
+						}
 						style={{
 							maxHeight: listHeight - bottomBarHeight,
 						}}
@@ -162,12 +199,14 @@ export default function AddExercise() {
 				</View>
 
 				<View style={{ flex: 1 }}>
-					<Button mode="outlined">Add</Button>
+					<Button mode="outlined" onPress={handleAdd}>
+						Add
+					</Button>
 				</View>
 
 				<View>
 					<IconButton
-						disabled={selectedExercises.length == 0}
+						disabled={localSelectedExercises.length == 0}
 						icon="format-list-checkbox"
 						style={[
 							styles.icon,
@@ -175,9 +214,9 @@ export default function AddExercise() {
 						]}
 						onPress={toggleSheet}
 					/>
-					{selectedExercises.length > 0 && (
+					{localSelectedExercises.length > 0 && (
 						<Badge style={styles.badge}>
-							{selectedExercises.length}
+							{localSelectedExercises.length}
 						</Badge>
 					)}
 				</View>
