@@ -143,6 +143,7 @@ export default function AddExercise() {
 					onSelect={setLocalSelectedExercises}
 				/>
 
+				{/* BOTTOM SHEET */}
 				<Animated.View
 					pointerEvents={modalVisible ? "auto" : "none"}
 					style={[
@@ -163,9 +164,16 @@ export default function AddExercise() {
 						},
 					]}
 				>
-					<Text style={styles.bottomSheetTitle}>
-						Selected Exercises
-					</Text>
+					<View style={styles.bottomSheetTitleContainer}>
+						<Text style={styles.bottomSheetTitle}>
+							Selected Exercises
+						</Text>
+						<IconButton
+							icon="close-circle-outline"
+							style={[styles.icon, { marginRight: -10 }]}
+							onPress={() => setModalVisible(false)}
+						/>
+					</View>
 
 					<DraggableFlatList
 						data={localSelectedExercises}
@@ -240,19 +248,22 @@ const styles = StyleSheet.create({
 	},
 	bottomSheet: {
 		position: "absolute",
-		//top: 0,
-		//bottom: 0,
 		left: 0,
 		right: 0,
 		borderTopLeftRadius: 12,
 		borderTopRightRadius: 12,
 		paddingTop: 15,
 	},
+	bottomSheetTitleContainer: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginHorizontal: 20,
+	},
 	bottomSheetTitle: {
 		fontSize: 18,
 		fontWeight: "bold",
 		marginBottom: 10,
-		paddingHorizontal: 20,
 	},
 	listItem: {
 		flexDirection: "row",
