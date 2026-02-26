@@ -79,8 +79,28 @@ const DateCarousel: React.FC<DateCarouselProps> = ({
 		onDateSelected(date);
 	};
 
+	const markedSet = useMemo(
+		() =>
+			new Set(
+				markedDates.map((d) =>
+					new Date(
+						d.getFullYear(),
+						d.getMonth(),
+						d.getDate(),
+					).getTime(),
+				),
+			),
+		[markedDates],
+	);
+
 	const isMarked = (date: Date) =>
-		markedDates.some((d) => isSameDay(d, date));
+		markedSet.has(
+			new Date(
+				date.getFullYear(),
+				date.getMonth(),
+				date.getDate(),
+			).getTime(),
+		);
 
 	return (
 		<View style={styles.container}>
